@@ -74,7 +74,8 @@ try:
     for s in sheets:
         st.write(f"📄 {s.title}")
 except Exception as e:
-    st.error(f"❌ 接続エラー: {e}")
+    st.error("❌ 接続エラーが発生しました。詳細は以下を確認してください。")
+    st.exception(e)  # ← これを追加すると詳細エラー表示
 
 if 'started' not in st.session_state:
     st.session_state.started = False
