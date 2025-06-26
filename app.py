@@ -56,6 +56,16 @@ st.set_page_config(layout="wide")
 
 st.title("セルフケア＆自己成長アプリ")
 
+import streamlit as st
+
+st.title("Secrets確認テスト")
+
+# サービスアカウントのメールだけ表示してみる
+st.write("認証メール:", st.secrets["gcp_service_account"]["client_email"])
+
+# 秘密鍵の先頭5文字だけ確認（セキュリティのため全表示は避ける）
+st.write("秘密鍵（冒頭）:", st.secrets["gcp_service_account"]["private_key"][:30])
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
