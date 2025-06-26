@@ -1,11 +1,18 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-import os
 import random
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-CARE_LOG = "care_log.csv"
+# Google Sheets連携設定
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope)
+client = gspread.authorize(creds)
+sheet = client.open("care-log").worksheet("2025")
 
+# 定数定義
 GOOD_SIGNS = ["よく眠れた", "体が軽い"]
 WARNING_SIGNS = ["肩が重い", "集中しづらい", "眠気がある"]
 BAD_SIGNS = ["胃の調子が悪い", "頭痛がある"]
@@ -20,27 +27,7 @@ for sign in GOOD_SIGNS + WARNING_SIGNS + BAD_SIGNS:
         5: ["5の場合のセルフケア"]
     }
 
-def save_df(file, new_row):
-    today = new_row['日付']
-    if os.path.exists(file):
-        df = pd.read_csv(file)
-        df = df[df['日付'] != today]
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    else:
-        df = pd.DataFrame([new_row])
-    df.to_csv(file, index=False)
-    return df
-
-def generate_advice(scores):
-    results = []
-    for symptom, score in scores.items():
-        options = SYMPTOMS.get(symptom, {}).get(score, [])
-        sample_size = 1 if symptom in GOOD_SIGNS else 3
-        sampled = random.sample(options, min(sample_size, len(options)))
-        for advice in sampled:
-            results.append(f"{symptom}（{score}）→ {advice}")
-    return "\n".join(results) if results else "（セルフケア提案はありません）"
-
+# 関数定義
 def calculate_sleep_duration(sleep_time, wake_time):
     try:
         fmt_sleep = datetime.strptime(sleep_time, "%H:%M")
@@ -52,40 +39,27 @@ def calculate_sleep_duration(sleep_time, wake_time):
     except:
         return None
 
-st.set_page_config(layout="wide")
+def generate_advice(scores):
+    results = []
+    for symptom, score in scores.items():
+        options = SYMPTOMS.get(symptom, {}).get(score, [])
+        sample_size = 1 if symptom in GOOD_SIGNS else 3
+        sampled = random.sample(options, min(sample_size, len(options)))
+        for advice in sampled:
+            results.append(f"{symptom}（{score}）→ {advice}")
+    return "\n".join(results) if results else "（セルフケア提案はありません）"
 
-st.title("セルフケア＆自己成長アプリ")
-
-import streamlit as st
-
-st.title("Secrets確認テスト")
-
-# サービスアカウントのメールだけ表示してみる
-st.write("認証メール:", st.secrets["gcp_service_account"]["client_email"])
-
-# 秘密鍵の先頭5文字だけ確認（セキュリティのため全表示は避ける）
-st.write("秘密鍵（冒頭）:", st.secrets["gcp_service_account"]["private_key"][:30])
-
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-
-st.header("🔐 Google Sheets 認証テスト")
-
-try:
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
+def append_to_sheet(row):
+    values = [
+        row["日付"], row["就寝"], row["起床"], row["睡眠時間"],
+        row["何があったか"], row["どう感じたか"], row["何をしたか"],
+        row["今日の調子"]
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gcp_service_account"], scope)
-    client = gspread.authorize(creds)
-    sheets = client.openall()
-    st.success("✅ Google Sheetsとの接続に成功しました！")
-    for s in sheets:
-        st.write(f"📄 {s.title}")
-except Exception as e:
-    st.error("❌ 接続エラーが発生しました。詳細は以下を確認してください。")
-    st.exception(e)  # ← これを追加すると詳細エラー表示
+    sheet.append_row(values)
+
+# UI構築
+st.set_page_config(layout="wide")
+st.title("セルフケア＆自己成長アプリ")
 
 if 'started' not in st.session_state:
     st.session_state.started = False
@@ -157,35 +131,25 @@ else:
                 "何をしたか": what_did,
                 "今日の調子": condition
             }
-            df = save_df(CARE_LOG, row)
-
-            one_week_ago = datetime.today() - timedelta(days=7)
-            df['日付'] = pd.to_datetime(df['日付'], errors='coerce')
-            filtered = df[df['日付'] >= one_week_ago]
-            filtered = filtered[(filtered['今日の調子'].isin(['悪い', 'とても悪い'])) | (filtered['睡眠時間'] < 6)]
-            st.dataframe(filtered.sort_values("日付", ascending=False).tail(10))
-
+            append_to_sheet(row)
             advice = generate_advice(scores)
             st.markdown(f"""
                 <div style='position: fixed; top: 10px; right: 10px; background-color: #fafafa; border: 1px solid #ddd; padding: 15px; border-radius: 10px; z-index: 1000;'>
                     <b>💡 今日のアドバイス</b><br>{advice}<br>
-                    <button onclick="this.parentElement.style.display='none';" style='margin-top:5px;'>✖️ 閉じる</button>
+                    <button onclick=\"this.parentElement.style.display='none';\" style='margin-top:5px;'>✖️ 閉じる</button>
                 </div>
             """, unsafe_allow_html=True)
 
     with tabs[1]:
         st.subheader("振り返り")
-        if os.path.exists(CARE_LOG):
-            df = pd.read_csv(CARE_LOG)
+        all_data = sheet.get_all_records()
+        if all_data:
+            df = pd.DataFrame(all_data)
             df = df.sort_values("日付", ascending=False)
             selected_date = st.selectbox("日付を選択", df["日付"].tolist())
-
-            st.markdown("### 🕒 睡眠時間")
             selected_row = df[df["日付"] == selected_date].iloc[0]
-            sleep = selected_row["就寝"]
-            wake = selected_row["起床"]
-            st.markdown(f"**就寝**: {sleep}　**起床**: {wake}")
-
+            st.markdown("### 🕒 睡眠時間")
+            st.markdown(f"**就寝**: {selected_row['就寝']}　**起床**: {selected_row['起床']}")
             st.markdown("### 📓 メモ")
             col1, col2, col3 = st.columns(3)
             with col1:
