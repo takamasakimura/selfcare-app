@@ -56,6 +56,26 @@ st.set_page_config(layout="wide")
 
 st.title("セルフケア＆自己成長アプリ")
 
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+st.header("🔐 Google Sheets 認証テスト")
+
+try:
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope)
+    client = gspread.authorize(creds)
+    sheets = client.openall()
+    st.success("✅ Google Sheetsとの接続に成功しました！")
+    for s in sheets:
+        st.write(f"📄 {s.title}")
+except Exception as e:
+    st.error(f"❌ 接続エラー: {e}")
+
 if 'started' not in st.session_state:
     st.session_state.started = False
 
