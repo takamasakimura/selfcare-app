@@ -10,7 +10,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
     st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
-sheet = client.open("care-log").worksheet("2025")
+sheet = client.open("care_log").worksheet("2025")
 
 # 定数定義
 GOOD_SIGNS = ["よく眠れた", "体が軽い"]
