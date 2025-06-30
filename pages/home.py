@@ -1,14 +1,9 @@
 import streamlit as st
 
-def display_base64_gif(gif_path_txt, width=600):
-    with open(gif_path_txt, "r") as f:
-        base64_gif = f.read().replace("\n", "")  # 改行除去
-    st.markdown(
-        f"""
-        <img src="data:image/gif;base64,{base64_gif}" width="{width}" />
-        """,
-        unsafe_allow_html=True,
-    )
+from utils import display_base64_gif
+
+# 使用箇所
+display_base64_gif("gif_assets/start_banner.gif.txt", width=600)
 
 # 起動画面のビジュアル演出
 if "started" not in st.session_state:

@@ -1,4 +1,5 @@
 import streamlit as st
+from utils import display_base64_gif  # utils.py に定義してあること
 
 # Google Sheets連携設定
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -6,9 +7,28 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service
 client = gspread.authorize(creds)
 sheet = client.open("care_log").worksheet("2025")
 
-
-st.set_page_config(page_title="セルフケアアプリ", layout="centered")
+st.set_page_config(
+    page_title="セルフケアアプリ",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
 st.markdown("# セルフケア・メイン画面")
 st.markdown("左側メニューからページを選択してください")
 
+# セッション制御とGIF表示
+if "started" not in st.session_state:
+    st.session_state.started = False
+
+else:
+    st.markdown("### メニューからページを選択してください")
+
+if not st.session_state.started:
+    display_base64_gif("gif_assets/start_banner.gif.txt", width=600)
+    st.markdown("## - tap to start -")
+    if st.button("▶️ はじめる"):
+        st.session_state.started = True
+    st.stop()
+
+else:
+    st.markdown("### 左のメニューからページを選んでください")
