@@ -9,7 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
-sheet = client.open("care-log").worksheet("2025")
+sheet = client.open("care_log").worksheet("2025")
 
 # 起動画面のビジュアル演出
 if "started" not in st.session_state:
