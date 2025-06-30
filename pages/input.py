@@ -2,7 +2,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 import random
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 # 定数定義
 WARNING_SIGNS = ["肩が重い", "集中しづらい", "眠気がある"]

@@ -1,9 +1,10 @@
 import streamlit as st
 from utils import display_base64_gif  # utils.py に定義してあること
+from google.oauth2.service_account import Credentials
 
 # Google Sheets連携設定
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
 client = gspread.authorize(creds)
 sheet = client.open("care_log").worksheet("2025")
 
