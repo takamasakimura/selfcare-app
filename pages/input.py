@@ -1,8 +1,3 @@
-import pandas as pd
-from datetime import datetime, timedelta
-import random
-import gspread
-
 # 定数定義
 WARNING_SIGNS = ["肩が重い", "集中しづらい", "眠気がある"]
 BAD_SIGNS = ["胃の調子が悪い", "頭痛がある"]

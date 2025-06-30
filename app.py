@@ -1,12 +1,15 @@
 import streamlit as st
-from utils import display_base64_gif  # utils.py に定義してあること
+import pandas as pd
+from datetime import datetime, timedelta
+import random
+import gspread
 from google.oauth2.service_account import Credentials
 
 # Google Sheets連携設定
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
 client = gspread.authorize(creds)
-sheet = client.open("care_log").worksheet("2025")
+sheet = client.open("care-log").worksheet("2025")
 
 st.set_page_config(
     page_title="セルフケアアプリ",
