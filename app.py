@@ -5,6 +5,16 @@ import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+if "started" not in st.session_state:
+    st.session_state.started = False
+
+if not st.session_state.started:
+    st.image("start_banner.gif", width=600)  # 任意のgifファイル名　存在感あるサイズに設定
+    st.markdown("## - tap to start -")
+    if st.button("▶️ はじめる"):
+        st.session_state.started = True
+    st.stop()
+
 # Google Sheets連携設定
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
@@ -54,12 +64,12 @@ SYMPTOMS = {
 }
 
 NASA_TLX_ITEMS = {
-    "精神的要求": "どの程度，精神的かつ知覚的活動が要求されましたか？（例．思考，記憶，観察，検索など）",
-    "身体的要求": "どの程度，身体的活動が必要でしたか？（例，押す，引く，回す，操作，活動するなど）",
-    "時間的圧迫感": "作業や要素作業の頻度や速さにどの程度，時間的圧迫感を感じましたか？",
-    "作業達成度": "設定された作業の達成目標について，どの程度成功したと思いますか？",
-    "努力": "作業達成レベルに到達するのにどのくらい努力しましたか？",
-    "不満": "作業中，どのくらいストレス，不快感，苛立ちを感じましたか？"
+    "精神的要求（Mental Demand）": "どの程度，精神的かつ知覚的活動が要求されましたか？（例．思考，記憶，観察，検索など）",
+    "身体的要求（Physical Demand）": "どの程度，身体的活動が必要でしたか？（例，押す，引く，回す，操作，活動するなど）",
+    "時間的要求（Temporal Demand）": "作業や要素作業の頻度や速さにどの程度，時間的要求（Temporal Demand）を感じましたか？",
+    "努力度（Effort）": "作業達成レベルに到達するのにどのくらい努力度（Effort）しましたか？",
+    "成果満足度（Performance）": "設定された作業の達成目標について，どの程度成功したと思いますか？",
+    "フラストレーション（Frustration）": "作業中，どのくらいストレス，不快感，苛立ちを感じましたか？"
 }
 
 NASA_TLX_GUIDE = pd.read_csv("nasa_tlx_guide.csv")
@@ -79,10 +89,10 @@ def render_nasa_tlx_slider(label):
 
 def generate_advice(scores, nasa_scores):
     tags_weight = {
-        "精神的疲労": nasa_scores.get("精神的要求", 0),
-        "身体的疲労": nasa_scores.get("身体的要求", 0),
-        "睡眠不足": nasa_scores.get("時間的圧迫感", 0),
-        "身体的不調": nasa_scores.get("不満", 0)
+        "精神的疲労": nasa_scores.get("精神的要求（Mental Demand）", 0),
+        "身体的疲労": nasa_scores.get("身体的要求（Physical Demand）", 0),
+        "睡眠不足": nasa_scores.get("時間的要求（Temporal Demand）", 0),
+        "身体的不調": nasa_scores.get("フラストレーション（Frustration）", 0)
     }
     weighted_advice = []
     for symptom, score in scores.items():
