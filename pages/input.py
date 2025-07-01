@@ -1,44 +1,34 @@
-# 定数定義
+import streamlit as st
+import pandas as pd
+import random
+from datetime import datetime, timedelta
+from utils import display_base64_gif
+import gspread
+from google.oauth2.service_account import Credentials
+
+# Google Sheets連携設定
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+client = gspread.authorize(creds)
+sheet = client.open("care-log").worksheet("2025")
+
+# ページ設定
+st.set_page_config(
+    page_title="セルフケアアプリ",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
+
+# 起動画面を経ていない場合は中断
+if not st.session_state.get("started", False):
+    st.warning("起動画面から開始してください。左側のメニューに戻ってください。")
+    st.stop()
+
+# NASA-TLXとセルフケア画面
+st.header("NASA-TLX 評価とセルフケア")
+
 WARNING_SIGNS = ["肩が重い", "集中しづらい", "眠気がある"]
 BAD_SIGNS = ["胃の調子が悪い", "頭痛がある"]
-
-SYMPTOMS = {
-    "肩が重い": {
-        1: [{"text": "ストレッチを行う", "tags": ["身体的疲労"]}],
-        2: [{"text": "肩を温める", "tags": ["身体的疲労"]}],
-        3: [{"text": "マッサージを受ける", "tags": ["身体的疲労"]}],
-        4: [{"text": "整体に相談", "tags": ["身体的疲労"]}],
-        5: [{"text": "早退を検討", "tags": ["身体的疲労"]}]
-    },
-    "集中しづらい": {
-        1: [{"text": "軽い散歩", "tags": ["精神的疲労"]}],
-        2: [{"text": "ガムを噛む", "tags": ["精神的疲労"]}],
-        3: [{"text": "作業の切り替え", "tags": ["精神的疲労"]}],
-        4: [{"text": "15分の仮眠", "tags": ["精神的疲労"]}],
-        5: [{"text": "休養の検討", "tags": ["精神的疲労"]}]
-    },
-    "眠気がある": {
-        1: [{"text": "顔を洗う", "tags": ["睡眠不足"]}],
-        2: [{"text": "カフェイン摂取", "tags": ["睡眠不足"]}],
-        3: [{"text": "短時間の昼寝", "tags": ["睡眠不足"]}],
-        4: [{"text": "休憩を取る", "tags": ["睡眠不足"]}],
-        5: [{"text": "無理せず横になる", "tags": ["睡眠不足"]}]
-    },
-    "胃の調子が悪い": {
-        1: [{"text": "胃に優しい食事を取る", "tags": ["身体的不調"]}],
-        2: [{"text": "消化に良いスープを", "tags": ["身体的不調"]}],
-        3: [{"text": "食事を控えめに", "tags": ["身体的不調"]}],
-        4: [{"text": "市販薬を服用", "tags": ["身体的不調"]}],
-        5: [{"text": "医師に相談", "tags": ["身体的不調"]}]
-    },
-    "頭痛がある": {
-        1: [{"text": "こめかみを冷やす", "tags": ["身体的不調"]}],
-        2: [{"text": "目を閉じて休む", "tags": ["身体的不調"]}],
-        3: [{"text": "静かな場所で休む", "tags": ["身体的不調"]}],
-        4: [{"text": "痛み止めを検討", "tags": ["身体的不調"]}],
-        5: [{"text": "医療機関へ", "tags": ["身体的不調"]}]
-    }
-}
 
 NASA_TLX_ITEMS = {
     "精神的要求（Mental Demand）": "どの程度，精神的かつ知覚的活動が要求されましたか？（例．思考，記憶，観察，検索など）",
@@ -54,13 +44,6 @@ def load_guide_column(item):
     df = pd.read_csv("nasa_tlx_guide.csv", usecols=["スコア", item])
     return df.dropna()
 
-today = datetime.today().strftime("%Y-%m-%d")
-header = sheet.row_values(1)
-required_cols = ["日付"] + list(NASA_TLX_ITEMS.keys()) + WARNING_SIGNS + BAD_SIGNS + ["就寝", "起床", "睡眠時間", "何があったか", "どう感じたか", "何をしたか"]
-missing = [col for col in required_cols if col not in header]
-if missing:
-    sheet.insert_row(header + missing[len(header):], 1)
-
 def render_nasa_tlx_slider(label):
     with st.expander(f"{label}（説明を見る）"):
         st.markdown(NASA_TLX_ITEMS[label])
@@ -68,12 +51,47 @@ def render_nasa_tlx_slider(label):
         st.dataframe(guide, height=200)
     return st.slider(f"{label}（0〜10）", 0, 10, 5, key=label)
 
+def calc_sleep_hours(start, end):
+    if start and end:
+        duration = (datetime.combine(datetime.today(), end) - datetime.combine(datetime.today(), start)).seconds
+        return round(duration / 3600, 2)
+    return None
+
+nasa_scores = {}
+scores = {}
+sleep_time = st.time_input("就寝時間", key="sleep")
+wake_time = st.time_input("起床時間", key="wake")
+sleep_hours = calc_sleep_hours(sleep_time, wake_time)
+
+for item in NASA_TLX_ITEMS:
+    nasa_scores[item] = render_nasa_tlx_slider(item)
+
+st.markdown("---")
+st.subheader("注意・悪化サイン入力")
+for symptom in WARNING_SIGNS + BAD_SIGNS:
+    scores[symptom] = st.radio(f"{symptom}（1〜5）", [1,2,3,4,5], horizontal=True, key=symptom)
+
+if sleep_hours is not None:
+    st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
+
+st.subheader("今日のメモ")
+memo_what = st.text_area("何があったか？", key="memo_what")
+memo_feel = st.text_area("どう感じたか？", key="memo_feel")
+memo_did = st.text_area("何をしたか？", key="memo_did")
+
 def generate_advice(scores, nasa_scores):
     tags_weight = {
         "精神的疲労": nasa_scores.get("精神的要求（Mental Demand）", 0),
         "身体的疲労": nasa_scores.get("身体的要求（Physical Demand）", 0),
         "睡眠不足": nasa_scores.get("時間的要求（Temporal Demand）", 0),
         "身体的不調": nasa_scores.get("フラストレーション（Frustration）", 0)
+    }
+    SYMPTOMS = {
+        "肩が重い": {1:[{"text":"ストレッチを行う","tags":["身体的疲労"]}], 2:[{"text":"肩を温める","tags":["身体的疲労"]}], 3:[{"text":"マッサージを受ける","tags":["身体的疲労"]}], 4:[{"text":"整体に相談","tags":["身体的疲労"]}], 5:[{"text":"早退を検討","tags":["身体的疲労"]}]},
+        "集中しづらい": {1:[{"text":"軽い散歩","tags":["精神的疲労"]}], 2:[{"text":"ガムを噛む","tags":["精神的疲労"]}], 3:[{"text":"作業の切り替え","tags":["精神的疲労"]}], 4:[{"text":"15分の仮眠","tags":["精神的疲労"]}], 5:[{"text":"休養の検討","tags":["精神的疲労"]}]},
+        "眠気がある": {1:[{"text":"顔を洗う","tags":["睡眠不足"]}], 2:[{"text":"カフェイン摂取","tags":["睡眠不足"]}], 3:[{"text":"短時間の昼寝","tags":["睡眠不足"]}], 4:[{"text":"休憩を取る","tags":["睡眠不足"]}], 5:[{"text":"無理せず横になる","tags":["睡眠不足"]}]},
+        "胃の調子が悪い": {1:[{"text":"胃に優しい食事を取る","tags":["身体的不調"]}], 2:[{"text":"消化に良いスープを","tags":["身体的不調"]}], 3:[{"text":"食事を控えめに","tags":["身体的不調"]}], 4:[{"text":"市販薬を服用","tags":["身体的不調"]}], 5:[{"text":"医師に相談","tags":["身体的不調"]}]},
+        "頭痛がある": {1:[{"text":"こめかみを冷やす","tags":["身体的不調"]}], 2:[{"text":"目を閉じて休む","tags":["身体的不調"]}], 3:[{"text":"静かな場所で休む","tags":["身体的不調"]}], 4:[{"text":"痛み止めを検討","tags":["身体的不調"]}], 5:[{"text":"医療機関へ","tags":["身体的不調"]}]}
     }
     weighted_advice = []
     for symptom, score in scores.items():
@@ -85,59 +103,10 @@ def generate_advice(scores, nasa_scores):
     top = random.sample(weighted_advice[:10], min(3, len(weighted_advice)))
     return "\n".join([f"💡 {advice}" for advice, _ in top]) if top else "（アドバイスがありません）"
 
-st.header("NASA-TLX 評価とセルフケア")
-nasa_scores = {}
-scores = {}
-sleep_time = None
-wake_time = None
-sleep_hours = None
-memo_what = ""
-memo_feel = ""
-memo_did = ""
-
-try:
-    existing_dates = sheet.col_values(1)
-    if today in existing_dates:
-        idx = existing_dates.index(today) + 1
-        row = sheet.row_values(idx)
-        for i, key in enumerate(NASA_TLX_ITEMS.keys(), start=1):
-            nasa_scores[key] = int(row[i]) if row[i].isdigit() else 5
-        for i, key in enumerate(WARNING_SIGNS + BAD_SIGNS, start=1+len(NASA_TLX_ITEMS)):
-            scores[key] = int(row[i]) if row[i].isdigit() else 3
-        sleep_time = datetime.strptime(row[-6], "%H:%M").time()
-        wake_time = datetime.strptime(row[-5], "%H:%M").time()
-        sleep_hours = float(row[-4])
-        memo_what = row[-3]
-        memo_feel = row[-2]
-        memo_did = row[-1]
-    else:
-        for item in NASA_TLX_ITEMS:
-            nasa_scores[item] = render_nasa_tlx_slider(item)
-        st.markdown("---")
-        st.subheader("注意・悪化サイン入力")
-        for symptom in WARNING_SIGNS + BAD_SIGNS:
-            scores[symptom] = st.radio(f"{symptom}（1〜5）", [1,2,3,4,5], horizontal=True, key=symptom)
-        st.subheader("睡眠時間の記録")
-        sleep_time = st.time_input("就寝時間", key="sleep")
-        wake_time = st.time_input("起床時間", key="wake")
-        def calc_sleep_hours(start, end):
-            if start and end:
-                duration = (datetime.combine(datetime.today(), end) - datetime.combine(datetime.today(), start)).seconds
-                return round(duration / 3600, 2)
-            return None
-        sleep_hours = calc_sleep_hours(sleep_time, wake_time)
-        if sleep_hours is not None:
-            st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
-        st.subheader("今日のメモ")
-        memo_what = st.text_area("何があったか？", key="memo_what")
-        memo_feel = st.text_area("どう感じたか？", key="memo_feel")
-        memo_did = st.text_area("何をしたか？", key="memo_did")
-except Exception as e:
-    st.warning("既存データの読み込みに失敗しました")
-    st.exception(e)
-
 if st.button("保存してアドバイス表示"):
     try:
+        today = datetime.today().strftime("%Y-%m-%d")
+        existing_dates = sheet.col_values(1)
         update_values = [nasa_scores[k] for k in NASA_TLX_ITEMS] + [scores[k] for k in WARNING_SIGNS + BAD_SIGNS] + [
             sleep_time.strftime("%H:%M"), wake_time.strftime("%H:%M"), sleep_hours,
             memo_what, memo_feel, memo_did
