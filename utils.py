@@ -27,3 +27,14 @@ def encode_gif_to_base64(gif_path, output_txt_path):
     except Exception as e:
         print("❌ Base64変換失敗:")
         print(e)
+
+def validate_headers(sheet, expected_headers, header_row=1):
+    """
+    指定されたヘッダー行と `expected_headers` を比較し、完全一致しない場合は ValueError を出す
+    """
+    sheet_headers = sheet.row_values(header_row)
+    if sheet_headers[:len(expected_headers)] != expected_headers:
+        raise ValueError(
+            f"Google Sheetsのヘッダーと定義が一致しません。\n"
+            f"想定: {expected_headers}\n取得: {sheet_headers}"
+        )

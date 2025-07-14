@@ -24,6 +24,17 @@ if not st.session_state.get("started", False):
     st.warning("起動画面から開始してください。左側のメニューに戻ってください。")
     st.stop()
 
+# ヘッダーの読み込みと整合性確認
+header = sheet.row_values(1)
+today = datetime.today().strftime("%Y-%m-%d")
+existing_dates = sheet.col_values(1)
+data_row = None
+
+if today in existing_dates:
+    idx = existing_dates.index(today) + 1
+    values = sheet.row_values(idx)
+    data_row = dict(zip(header, values[1:] + [None]*(len(header)-len(values[1:]))))
+
 # NASA-TLXとセルフケア画面
 st.header("NASA-TLX 評価とセルフケア")
 
@@ -49,7 +60,8 @@ def render_nasa_tlx_slider(label):
         st.markdown(NASA_TLX_ITEMS[label])
         guide = load_guide_column(label)
         st.dataframe(guide, height=200)
-    return st.slider(f"{label}（0〜10）", 0, 10, 5, key=label)
+    default = int(data_row[label]) if data_row and label in data_row and data_row[label].isdigit() else 5
+    return st.slider(f"{label}（0〜10）", 0, 10, default, key=label)
 
 def calc_sleep_hours(start, end):
     if start and end:
@@ -59,8 +71,18 @@ def calc_sleep_hours(start, end):
 
 nasa_scores = {}
 scores = {}
-sleep_time = st.time_input("就寝時間", key="sleep")
-wake_time = st.time_input("起床時間", key="wake")
+
+def parse_time(value):
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except:
+        return None
+
+sleep_default = parse_time(data_row["就寝時間"]) if data_row else None
+wake_default = parse_time(data_row["起床時間"]) if data_row else None
+
+sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
+wake_time = st.time_input("起床時間", value=wake_default, key="wake")
 sleep_hours = calc_sleep_hours(sleep_time, wake_time)
 
 for item in NASA_TLX_ITEMS:
@@ -69,15 +91,18 @@ for item in NASA_TLX_ITEMS:
 st.markdown("---")
 st.subheader("注意・悪化サイン入力")
 for symptom in WARNING_SIGNS + BAD_SIGNS:
-    scores[symptom] = st.radio(f"{symptom}（1〜5）", [1,2,3,4,5], horizontal=True, key=symptom)
+    default = int(data_row[symptom]) if data_row and symptom in data_row and data_row[symptom].isdigit() else 3
+    scores[symptom] = st.radio(f"{symptom}（1〜5）", [1,2,3,4,5], index=default-1, horizontal=True, key=symptom)
 
 if sleep_hours is not None:
     st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
 
 st.subheader("今日のメモ")
-memo_what = st.text_area("何があったか？", key="memo_what")
-memo_feel = st.text_area("どう感じたか？", key="memo_feel")
-memo_did = st.text_area("何をしたか？", key="memo_did")
+memo_what = st.text_area("何があったか？", value=data_row.get("何があったか？", "") if data_row else "", key="memo_what")
+memo_feel = st.text_area("どう感じたか？", value=data_row.get("どう感じたか？", "") if data_row else "", key="memo_feel")
+memo_did = st.text_area("何をしたか？", value=data_row.get("何をしたか？", "") if data_row else "", key="memo_did")
+
+# 生成関数と保存処理（元のコードと同じ）
 
 def generate_advice(scores, nasa_scores):
     tags_weight = {
