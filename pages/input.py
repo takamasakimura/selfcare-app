@@ -81,9 +81,6 @@ sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
 wake_time = st.time_input("起床時間", value=wake_default, key="wake")
 sleep_hours = calc_sleep_hours(sleep_time, wake_time)
 
-for item in NASA_TLX_ITEMS:
-    nasa_scores[item] = render_nasa_tlx_slider(item)
-
 st.markdown("---")
 st.subheader("注意・悪化サイン入力")
 for symptom in WARNING_SIGNS + BAD_SIGNS:
@@ -176,6 +173,10 @@ if today in existing_dates:
     memo_feel = st.text_area("どう感じたか？", value=row[header_map.get("どう感じたか", -1)] if "どう感じたか" in header_map else "", key="memo_feel")
     memo_did = st.text_area("何をしたか？", value=row[header_map.get("何をしたか", -1)] if "何をしたか" in header_map else "", key="memo_did")
 
+# セッションステートでアドバイス表示状態を管理
+if "show_advice" not in st.session_state:
+    st.session_state.show_advice = False
+
 if st.button("保存してアドバイス表示"):
     try:
         today = datetime.today().strftime("%Y-%m-%d")
@@ -189,14 +190,18 @@ if st.button("保存してアドバイス表示"):
             sheet.update(f"B{idx}:{chr(65+len(update_values))}{idx}", [update_values])
         else:
             sheet.append_row([today] + update_values)
-        advice = generate_advice(scores, nasa_scores)
-        st.markdown(f"""
-            <div style='position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #f0f0f0; border: 2px solid #ccc; padding: 20px; border-radius: 10px; z-index: 1000;'>
-                <h4>✨ 今日のセルフケアアドバイス ✨</h4>
-                <p>{advice}</p>
-                <button onclick=\"this.parentElement.style.display='none';\">閉じる</button>
-            </div>
-        """, unsafe_allow_html=True)
+
+        st.session_state.advice_text = generate_advice(scores, nasa_scores)
+        st.session_state.show_advice = True  # 表示ONにする
+
     except Exception as e:
         st.error("保存中にエラーが発生しました")
         st.exception(e)
+
+# 表示フラグに応じてアドバイス表示
+if st.session_state.get("show_advice", False):
+    with st.container():
+        st.markdown("### ✨ 今日のセルフケアアドバイス ✨")
+        st.info(st.session_state.advice_text)
+        if st.button("❌ 閉じる"):
+            st.session_state.show_advice = False
