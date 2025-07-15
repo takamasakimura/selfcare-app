@@ -31,6 +31,12 @@ today = datetime.today().strftime("%Y-%m-%d")
 existing_dates = sheet.col_values(header_map["日付"] + 1)
 data_row = None
 
+sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
+wake_time = st.time_input("起床時間", value=wake_default, key="wake")
+sleep_hours = calc_sleep_hours(sleep_time, wake_time)
+if sleep_hours is not None:
+    st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
+
 # NASA-TLXとセルフケア画面
 st.header("NASA-TLX 評価とセルフケア")
 
@@ -77,18 +83,11 @@ def parse_time(value):
 sleep_default = parse_time(data_row["就寝時間"]) if data_row else None
 wake_default = parse_time(data_row["起床時間"]) if data_row else None
 
-sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
-wake_time = st.time_input("起床時間", value=wake_default, key="wake")
-sleep_hours = calc_sleep_hours(sleep_time, wake_time)
-
 st.markdown("---")
 st.subheader("注意・悪化サイン入力")
 for symptom in WARNING_SIGNS + BAD_SIGNS:
     default = int(data_row[symptom]) if data_row and symptom in data_row and data_row[symptom].isdigit() else 3
     scores[symptom] = st.radio(f"{symptom}（1〜5）", [1,2,3,4,5], index=default-1, horizontal=True, key=symptom)
-
-if sleep_hours is not None:
-    st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
 
 st.subheader("今日のメモ")
 memo_what = st.text_area("何があったか？", value=data_row.get("何があったか？", "") if data_row else "", key="memo_what")
