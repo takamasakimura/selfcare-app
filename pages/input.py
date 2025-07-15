@@ -26,14 +26,10 @@ if not st.session_state.get("started", False):
 
 # ヘッダーの読み込みと整合性確認
 header = sheet.row_values(1)
+header_map = {name: idx for idx, name in enumerate(header)}
 today = datetime.today().strftime("%Y-%m-%d")
-existing_dates = sheet.col_values(1)
+existing_dates = sheet.col_values(header_map["日付"] + 1)
 data_row = None
-
-if today in existing_dates:
-    idx = existing_dates.index(today) + 1
-    values = sheet.row_values(idx)
-    data_row = dict(zip(header, values[1:] + [None]*(len(header)-len(values[1:]))))
 
 # NASA-TLXとセルフケア画面
 st.header("NASA-TLX 評価とセルフケア")
@@ -127,6 +123,58 @@ def generate_advice(scores, nasa_scores):
     weighted_advice.sort(key=lambda x: -x[1])
     top = random.sample(weighted_advice[:10], min(3, len(weighted_advice)))
     return "\n".join([f"💡 {advice}" for advice, _ in top]) if top else "（アドバイスがありません）"
+
+if today in existing_dates:
+    idx = existing_dates.index(today) + 1
+    row = sheet.row_values(idx)
+
+    # NASA TLX スライダー復元
+    for key in NASA_TLX_ITEMS:
+        col = header_map.get(key)
+        if col is not None and col < len(row):
+            try:
+                val = int(row[col])
+                nasa_scores[key] = st.slider(f"{key}（0〜10）", 0, 10, val, key=key)
+            except:
+                nasa_scores[key] = st.slider(f"{key}（0〜10）", 0, 10, 5, key=key)
+        else:
+            nasa_scores[key] = st.slider(f"{key}（0〜10）", 0, 10, 5, key=key)
+
+    st.markdown("---")
+    st.subheader("注意・悪化サイン入力")
+
+    for sign in WARNING_SIGNS + BAD_SIGNS:
+        col = header_map.get(sign)
+        if col is not None and col < len(row):
+            try:
+                val = int(row[col])
+                scores[sign] = st.radio(f"{sign}（1〜5）", [1, 2, 3, 4, 5], horizontal=True, index=val-1, key=sign)
+            except:
+                scores[sign] = st.radio(f"{sign}（1〜5）", [1, 2, 3, 4, 5], horizontal=True, index=2, key=sign)
+        else:
+            scores[sign] = st.radio(f"{sign}（1〜5）", [1, 2, 3, 4, 5], horizontal=True, index=2, key=sign)
+
+    st.subheader("睡眠時間の記録")
+    try:
+        sleep_raw = row[header_map["就寝"]]
+        wake_raw = row[header_map["起床"]]
+        sleep_time = datetime.strptime(sleep_raw, "%H:%M").time()
+        wake_time = datetime.strptime(wake_raw, "%H:%M").time()
+    except:
+        sleep_time = st.time_input("就寝時間", value=datetime.strptime("23:00", "%H:%M").time(), key="sleep")
+        wake_time = st.time_input("起床時間", value=datetime.strptime("07:00", "%H:%M").time(), key="wake")
+    else:
+        sleep_time = st.time_input("就寝時間", value=sleep_time, key="sleep")
+        wake_time = st.time_input("起床時間", value=wake_time, key="wake")
+
+    sleep_hours = calc_sleep_hours(sleep_time, wake_time)
+    if sleep_hours is not None:
+        st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
+
+    st.subheader("今日のメモ")
+    memo_what = st.text_area("何があったか？", value=row[header_map.get("何があったか", -1)] if "何があったか" in header_map else "", key="memo_what")
+    memo_feel = st.text_area("どう感じたか？", value=row[header_map.get("どう感じたか", -1)] if "どう感じたか" in header_map else "", key="memo_feel")
+    memo_did = st.text_area("何をしたか？", value=row[header_map.get("何をしたか", -1)] if "何をしたか" in header_map else "", key="memo_did")
 
 if st.button("保存してアドバイス表示"):
     try:
