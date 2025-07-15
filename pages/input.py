@@ -31,12 +31,6 @@ today = datetime.today().strftime("%Y-%m-%d")
 existing_dates = sheet.col_values(header_map["日付"] + 1)
 data_row = None
 
-sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
-wake_time = st.time_input("起床時間", value=wake_default, key="wake")
-sleep_hours = calc_sleep_hours(sleep_time, wake_time)
-if sleep_hours is not None:
-    st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
-
 # NASA-TLXとセルフケア画面
 st.header("NASA-TLX 評価とセルフケア")
 
@@ -119,6 +113,12 @@ def generate_advice(scores, nasa_scores):
     weighted_advice.sort(key=lambda x: -x[1])
     top = random.sample(weighted_advice[:10], min(3, len(weighted_advice)))
     return "\n".join([f"💡 {advice}" for advice, _ in top]) if top else "（アドバイスがありません）"
+
+sleep_time = st.time_input("就寝時間", value=sleep_default, key="sleep")
+wake_time = st.time_input("起床時間", value=wake_default, key="wake")
+sleep_hours = calc_sleep_hours(sleep_time, wake_time)
+if sleep_hours is not None:
+    st.write(f"🕒 睡眠時間: {sleep_hours} 時間")
 
 if today in existing_dates:
     idx = existing_dates.index(today) + 1
