@@ -31,9 +31,6 @@ today = datetime.today().strftime("%Y-%m-%d")
 existing_dates = sheet.col_values(header_map["日付"] + 1)
 data_row = None
 
-# NASA-TLXとセルフケア画面
-st.header("NASA-TLX 評価とセルフケア")
-
 WARNING_SIGNS = ["肩が重い", "集中しづらい", "眠気がある"]
 BAD_SIGNS = ["胃の調子が悪い", "頭痛がある"]
 
@@ -65,9 +62,6 @@ def calc_sleep_hours(start, end):
         return round(duration / 3600, 2)
     return None
 
-nasa_scores = {}
-scores = {}
-
 def parse_time(value):
     try:
         return datetime.strptime(value, "%H:%M").time()
@@ -78,6 +72,11 @@ sleep_default = parse_time(data_row["就寝時間"]) if data_row else None
 wake_default = parse_time(data_row["起床時間"]) if data_row else None
 
 st.markdown("---")
+# NASA-TLXとセルフケア画面
+st.subheader("NASA-TLX 評価とセルフケア")
+nasa_scores = {}
+scores = {}
+
 st.subheader("注意・悪化サイン入力")
 for symptom in WARNING_SIGNS + BAD_SIGNS:
     default = int(data_row[symptom]) if data_row and symptom in data_row and data_row[symptom].isdigit() else 3
@@ -135,9 +134,6 @@ if today in existing_dates:
                 nasa_scores[key] = st.slider(f"{key}（0〜10）", 0, 10, 5, key=key)
         else:
             nasa_scores[key] = st.slider(f"{key}（0〜10）", 0, 10, 5, key=key)
-
-    st.markdown("---")
-    st.subheader("注意・悪化サイン入力")
 
     for sign in WARNING_SIGNS + BAD_SIGNS:
         col = header_map.get(sign)
