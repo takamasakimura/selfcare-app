@@ -1,5 +1,63 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
 import base64
+import gspread
+from google.oauth2.service_account import Credentials
+
+# Google Sheets の認証
+@st.cache_resource
+def get_google_sheet():
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+    client = gspread.authorize(creds)
+    return client.open("care-log").worksheet("2025")
+
+# NASA-TLX ガイド読み込み
+@st.cache_data
+def load_guide_column(item):
+    df = pd.read_csv("nasa_tlx_guide.csv", usecols=["スコア", item])
+    return df.dropna()
+
+# NASA-TLX スライダー描画
+def render_nasa_tlx_slider(label, default):
+    with st.expander(f"{label}（説明を見る）"):
+        st.markdown(label)  # ツールチップ的説明があれば差し替え
+        guide = load_guide_column(label)
+        st.dataframe(guide, height=200)
+    return st.slider(f"{label}（0〜10）", 0, 10, default, key=f"nasa_{label}")
+
+# 睡眠時間の計算
+def calc_sleep_hours(sleep, wake):
+    dt_today = datetime.today()
+    sleep_dt = datetime.combine(dt_today, sleep)
+    wake_dt = datetime.combine(dt_today, wake)
+    if wake_dt <= sleep_dt:
+        wake_dt += timedelta(days=1)
+    return round((wake_dt - sleep_dt).seconds / 3600, 2)
+
+# アドバイス生成（重み付き）
+def generate_advice(scores, nasa_scores):
+    # ここは必要に応じて `SYMPTOMS` を別ファイルでインポートしてもよい
+    return "（アドバイス生成ロジックは後で定義）"
+
+# 時刻文字列→time型に変換
+from datetime import time
+def parse_time(s):
+    try:
+        return datetime.strptime(s, "%H:%M").time() if s else None
+    except:
+        return None
+
+# スプレッドシートから今日の行を復元
+def get_existing_data_row(sheet):
+    today = datetime.today().strftime("%Y-%m-%d")
+    headers = sheet.row_values(1)
+    all_data = sheet.get_all_records()
+    for row in all_data:
+        if str(row.get("日付", "")) == today:
+            return row
+    return None
 
 def display_base64_gif(file_path, width=600):
     """Base64エンコードされたGIFを画面に表示する"""
