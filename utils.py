@@ -4,14 +4,17 @@ from datetime import datetime, timedelta
 import base64
 import gspread
 from google.oauth2.service_account import Credentials
+import gspread
+from google.oauth2.service_account import Credentials
+import streamlit as st
 
-# Google Sheets の認証
 @st.cache_resource
 def get_google_sheet():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
     client = gspread.authorize(creds)
-    return client.open("care-log").worksheet("2025")
+    sheet = client.open("care-log").worksheet("2025")
+    return sheet
 
 # NASA-TLX ガイド読み込み
 @st.cache_data
