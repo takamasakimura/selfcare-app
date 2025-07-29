@@ -37,7 +37,7 @@ reflection1 = st.text_area("取り組んだこと")
 reflection2 = st.text_area("気づいたこと・感想")
 
 # GPTアドバイス（任意入力 or 自動挿入）
-gpt_advice = st.text_area("GPTアドバイス（任hozonn意）")
+gpt_advice = st.text_area("GPTアドバイス（任意）")
 
 # 保存ボタン
 if st.button("保存する"):
@@ -60,5 +60,4 @@ if st.button("保存する"):
 
     df = pd.DataFrame([record])  # ← ここで DataFrame を作成
     save_to_google_sheets(df, "care-log")
-    st.success("保存しました！")e-log")
     st.success("保存しました！")
