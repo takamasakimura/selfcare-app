@@ -21,11 +21,21 @@ with col2:
 sleep_duration = calculate_sleep_duration(sleep_time, wake_time)
 st.write(f"睡眠時間（推定）：{sleep_duration:.2f} 時間")
 
-# NASA-TLX スコア（1〜5）
-st.subheader("NASA-TLX（1〜5）")
-nasa_keys = ["精神的要求", "身体的要求", "時間的要求", "努力", "成果満足", "フラストレーション"]
-for q in nasa_questions:
-    nasa_scores[q] = st.slider(f"{q}（0〜10）", 0, 10, 5)
+nasa_questions = [
+    ("精神的要求（Mental Demand）", "精神的要求"),
+    ("身体的要求（Physical Demand）", "身体的要求"),
+    ("時間的要求（Temporal Demand）", "時間的要求"),
+    ("努力度（Effort）", "努力"),
+    ("成果満足度（Performance）", "成果満足"),
+    ("フラストレーション（Frustration）", "フラストレーション")
+]
+
+# NASA-TLX スコア（1〜10）
+nasa_scores = {}
+st.subheader("NASA-TLX評価（0〜10）")
+for question, label in nasa_questions:
+    score = st.slider(question, 0, 10, 5)
+    nasa_scores[label] = score
 
 # サイン（メモ内にタグとして）
 st.subheader("体調サイン・タグ付きメモ")
