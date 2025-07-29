@@ -101,6 +101,36 @@ def parse_time(s):
     except:
         return None
 
+def save_to_google_sheets(df: pd.DataFrame, spreadsheet_name: str, worksheet_name: str = "2025"):
+    """
+    指定されたスプレッドシートとシートに DataFrame を保存する。
+    同じ日付のデータがあれば上書き、なければ追加。
+    """
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_file("airy-decorator-463823-s6-2c980b5a5a35.json", scopes=scope)
+    client = gspread.authorize(creds)
+
+    sheet = client.open(spreadsheet_name).worksheet(worksheet_name)
+    existing_data = sheet.get_all_records()
+
+    existing_df = pd.DataFrame(existing_data)
+    if "日付" in existing_df.columns:
+        existing_df["日付"] = pd.to_datetime(existing_df["日付"])
+
+    new_row = df.iloc[0]
+    new_date = pd.to_datetime(new_row["日付"])
+
+    # 既存データに同じ日付があるかチェック
+    match_index = existing_df[existing_df["日付"] == new_date].index
+
+    # 上書き or 追加
+    if len(match_index) > 0:
+        row_number = match_index[0] + 2  # ヘッダーが1行あるため+2
+        sheet.delete_rows(row_number)
+        sheet.insert_rows([new_row.tolist()], row_number)
+    else:
+        sheet.append_row(new_row.tolist())
+
 # --- アドバイス生成（仮） ---
 def generate_advice(scores, nasa_scores):
     return "（アドバイス生成ロジックは後で定義）"
