@@ -17,15 +17,8 @@ df = load_data()
 # 日付をdatetime型に変換
 df["日付"] = pd.to_datetime(df["日付"])
 
-# 表示期間の選択
-min_date = df["日付"].min()
-max_date = df["日付"].max()
-default_start = max(min_date, max_date - pd.Timedelta(days=30))  # ← ここ修正
-
-start_date = st.date_input("表示開始日", default_start.date(), min_value=min_date.date(), max_value=max_date.date())
-end_date = st.date_input("表示終了日", max_date.date(), min_value=min_date.date(), max_value=max_date.date())
-
-filtered_df = df[(df["日付"] >= pd.to_datetime(start_date)) & (df["日付"] <= pd.to_datetime(end_date))]
+# 最新の日付順にソートし、最新30件を抽出
+filtered_df = df.sort_values(by="日付", ascending=False).head(30)
 
 # タブで表示切り替え
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["🛏️ 睡眠傾向", "📊 TLX分析", "🔄 TLX×睡眠相関", "🏷️ タグ傾向", "📓 内省ログ"])
