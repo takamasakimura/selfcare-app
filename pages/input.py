@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import streamlit as st
 import pandas as pd
 from utils import calculate_sleep_duration, save_to_google_sheets
@@ -6,7 +6,8 @@ from utils import calculate_sleep_duration, save_to_google_sheets
 st.title("セルフケア入力")
 
 # デフォルト日付（today）
-today = datetime.now().date()
+JST = timezone(timedelta(hours=9))
+today = datetime.now(JST).date()
 st.write(f"今日の日付：{today}")
 
 # 就寝・起床時刻
@@ -58,5 +59,5 @@ if st.button("保存する"):
         "気づいたこと": reflection2,
         "アドバイス": gpt_advice
     }
-    save_to_google_sheets(record)
+    save_to_google_sheets(df, "care-log")
     st.success("保存しました！")
