@@ -32,6 +32,23 @@ def get_google_sheet():
     sheet = client.open("care-log").worksheet("2025")
     return sheet
 
+def calculate_sleep_duration(bed_time_str: str, wake_time_str: str) -> float:
+    """
+    時刻文字列（例: "23:30", "06:15"）から睡眠時間（時間）を計算する。
+    翌日にまたがる睡眠にも対応。
+    """
+    try:
+        bed_time = datetime.strptime(bed_time_str, "%H:%M")
+        wake_time = datetime.strptime(wake_time_str, "%H:%M")
+
+        if wake_time <= bed_time:
+            wake_time += timedelta(days=1)
+
+        duration = wake_time - bed_time
+        return round(duration.total_seconds() / 3600, 2)
+    except Exception:
+        return 0.0
+
 def load_data():
     sheet = get_google_sheet()
     validate_headers(sheet, EXPECTED_HEADERS)  # 追加：読み込み時に検証
