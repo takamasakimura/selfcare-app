@@ -1,13 +1,15 @@
-
 import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import datetime
+import sys
+import os
+
+# 親ディレクトリのutils.pyを読み込むためのパス追加
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import load_data
 
 st.set_page_config(page_title="内省レポート", layout="wide")
-
-# Google Sheets 連携部分は utils.py の関数を使う前提
-from utils import load_data
 
 # データ読み込み
 df = load_data()
