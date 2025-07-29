@@ -14,6 +14,12 @@ def get_google_sheet():
     sheet = client.open("care-log").worksheet("2025")
     return sheet
 
+def load_data():
+    sheet = get_google_sheet()
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    return df
+
 def get_existing_data_row(sheet):
     today = datetime.today().strftime("%Y-%m-%d")
     headers = sheet.row_values(1)
