@@ -5,6 +5,24 @@ import base64
 import gspread
 from google.oauth2.service_account import Credentials
 
+# --- 想定ヘッダー定義 ---
+EXPECTED_HEADERS = [
+    "日付",
+    "就寝時刻",
+    "起床時刻",
+    "睡眠時間",
+    "精神的要求（Mental Demand）",
+    "身体的要求（Physical Demand）",
+    "時間的要求（Temporal Demand）",
+    "努力度（Effort）",
+    "成果満足度（Performance）",
+    "フラストレーション（Frustration）",
+    "体調サイン",
+    "取り組んだこと",
+    "気づいたこと",
+    "アドバイス"
+]
+
 # --- Google Sheets連携 ---
 @st.cache_resource
 def get_google_sheet():
@@ -16,6 +34,7 @@ def get_google_sheet():
 
 def load_data():
     sheet = get_google_sheet()
+    validate_headers(sheet, EXPECTED_HEADERS)  # 追加：読み込み時に検証
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
     return df
