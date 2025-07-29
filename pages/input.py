@@ -24,7 +24,8 @@ st.write(f"睡眠時間（推定）：{sleep_duration:.2f} 時間")
 # NASA-TLX スコア（1〜5）
 st.subheader("NASA-TLX（1〜5）")
 nasa_keys = ["精神的要求", "身体的要求", "時間的要求", "努力", "成果満足", "フラストレーション"]
-nasa_scores = {key: st.slider(key, 1, 5, 3) for key in nasa_keys}
+for q in nasa_questions:
+    nasa_scores[q] = st.slider(f"{q}（0〜10）", 0, 10, 5)
 
 # サイン（メモ内にタグとして）
 st.subheader("体調サイン・タグ付きメモ")
@@ -32,14 +33,11 @@ tagged_note = st.text_area("例：＜タグ：頭痛＞ 作業に集中できな
 
 # 自己成長メモ
 st.subheader("内省ログ")
-col3, col4 = st.columns(2)
-with col3:
-    reflection1 = st.text_area("取り組んだこと")
-with col4:
-    reflection2 = st.text_area("気づいたこと・感想")
+reflection1 = st.text_area("取り組んだこと")
+reflection2 = st.text_area("気づいたこと・感想")
 
 # GPTアドバイス（任意入力 or 自動挿入）
-gpt_advice = st.text_area("GPTアドバイス（任意）")
+gpt_advice = st.text_area("GPTアドバイス（任hozonn意）")
 
 # 保存ボタン
 if st.button("保存する"):
@@ -59,5 +57,8 @@ if st.button("保存する"):
         "気づいたこと": reflection2,
         "アドバイス": gpt_advice
     }
+
+    df = pd.DataFrame([record])  # ← ここで DataFrame を作成
     save_to_google_sheets(df, "care-log")
+    st.success("保存しました！")e-log")
     st.success("保存しました！")
