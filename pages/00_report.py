@@ -20,7 +20,7 @@ df["日付"] = pd.to_datetime(df["日付"])
 # 表示期間の選択
 min_date = df["日付"].min()
 max_date = df["日付"].max()
-default_start = max_date - pd.Timedelta(days=30)
+default_start = max(min_date, max_date - pd.Timedelta(days=30))  # ← ここ修正
 
 start_date = st.date_input("表示開始日", default_start.date(), min_value=min_date.date(), max_value=max_date.date())
 end_date = st.date_input("表示終了日", max_date.date(), min_value=min_date.date(), max_value=max_date.date())
